@@ -42,6 +42,11 @@ attribute of the HDF5); HyTools does not rescale. By default `1_map_traits_line.
 the models to those integer values, which is what the lab's NEON models were fitted on.
 Pass `--reflectance-scale 1e-4` for models fitted on 0-1 reflectance.
 
+Each flight is BRDF-normalised to its own scene-mean solar zenith angle, so lines from
+different days are not normalised to each other. Mosaicking, choosing which line to use in
+overlaps, and exporting single-band per-trait files are outside the scope of this
+repository.
+
 ## What NEON has already corrected
 
 From NEON's algorithm document for DP1.30006.001 (NEON.DOC.001288). ATCOR is run in its
@@ -52,8 +57,3 @@ which is how the lab has always treated NEON data. BRDF is not corrected in
 DP1.30006.001 (NEON's BRDF-corrected flightlines are the separate DP1.30006.002), and
 haze and cloud shadow are not removed: `Haze_Cloud_Water_Map` is a classification only,
 which is why it is carried into the QA raster.
-
-Each flight is BRDF-normalised to its own scene-mean solar zenith angle, so lines from
-different days are not normalised to each other. Mosaicking, choosing which line to use in
-overlaps, and exporting single-band per-trait files are outside the scope of this
-repository.
