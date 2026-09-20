@@ -1,0 +1,31 @@
+# Stage C: one job per flightline, after the flight's BRDF fit. The tarball goes to
+# OUTPUT_DEST, a pelican:// URL on the share (CHTC_TRAIT_MAP_DEST in config/paths.py), so
+# nothing large lands in /home or /staging.
+
+container_image = $(CONTAINER)
+
+executable = $(CHTC_DIR)/run_traits.sh
+arguments  = $(FLIGHT) $(LINE)
+
+transfer_input_files = $(CHTC_DIR)/job_common.sh, $(BUNDLE_DIR)/code.tar.gz, $(BUNDLE_DIR)/neon_token.txt, $(BUNDLE_DIR)/flights/$(FLIGHT).json, $(BUNDLE_DIR)/trait_models.tar.gz, $(RUN_DIR)/coeffs_$(FLIGHT).tar
+transfer_output_files = traits_$(LINE).tar, $(LINE)_traits.json
+transfer_output_remaps = "traits_$(LINE).tar = $(OUTPUT_DEST)/$(FLIGHT)/traits_$(LINE).tar; $(LINE)_traits.json = $(OUTPUT_DEST)/$(FLIGHT)/$(LINE)_traits.json"
+
+log    = $(RUN_DIR)/logs/traits_$(LINE).log
+output = $(RUN_DIR)/logs/traits_$(LINE).out
+error  = $(RUN_DIR)/logs/traits_$(LINE).err
+
+request_cpus   = 1
+# Memory grows only after a memory hold (code 34, counted as JobOutOfResources) and disk
+# only after a disk hold (code 21, StartdHeldJob); periodic_release then retries with the
+# larger request, up to three starts. Do not tie both to NumJobStarts: a memory hold
+# then doubles the disk request too, and a 35 GB line ends up asking for 232 GB of
+# scratch that no machine has.
+request_memory = $(MEMORY_MB) * (1 + ifThenElse(NumHoldsByReason.JobOutOfResources =?= UNDEFINED, 0, NumHoldsByReason.JobOutOfResources))
+periodic_release = (HoldReasonCode == 34 || HoldReasonCode == 21) && (NumJobStarts < 3)
+request_disk   = $(DISK_MB) * 1024 * (1 + ifThenElse(NumHoldsByReason.StartdHeldJob =?= UNDEFINED, 0, NumHoldsByReason.StartdHeldJob))
+
+requirements   = (HasCHTCStaging == true)
+max_retries = 2
+
+queue

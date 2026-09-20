@@ -1,0 +1,24 @@
+# One-minute check that this account can write to the share through Pelican, before you
+# queue thousands of jobs. From ~/<project>/chtc on the access point:
+#
+#   condor_submit pelican_test.sub DEST=$(python3 -c "import sys; sys.path.insert(0,'..'); from config.paths import UWDF_PROJECT_DIR; print(UWDF_PROJECT_DIR)")/chtc_tests
+#
+# A minute later the file should appear in that folder on the mounted share.
+
+executable = pelican_test.sh
+arguments  = $(Cluster)
+
+should_transfer_files = YES
+transfer_output_files = pelican_test_$(Cluster).txt
+transfer_output_remaps = "pelican_test_$(Cluster).txt = $(DEST)/pelican_test_$(Cluster).txt"
+
+log    = pelican_test.log
+output = pelican_test.out
+error  = pelican_test.err
+
+request_cpus   = 1
+request_memory = 512MB
+request_disk   = 512MB
+requirements   = (HasCHTCStaging == true)
+
+queue

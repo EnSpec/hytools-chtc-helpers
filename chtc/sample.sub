@@ -1,0 +1,31 @@
+# Stage A: one job per flightline. The per-flight DAG sets FLIGHT, LINE, DISK_MB,
+# MEMORY_MB, BUNDLE_DIR, RUN_DIR and CONTAINER (see make_dag.py).
+
+container_image = $(CONTAINER)
+
+executable = $(CHTC_DIR)/run_sample.sh
+arguments  = $(FLIGHT) $(LINE)
+
+transfer_input_files = $(CHTC_DIR)/job_common.sh, $(BUNDLE_DIR)/code.tar.gz, $(BUNDLE_DIR)/neon_token.txt, $(BUNDLE_DIR)/flights/$(FLIGHT).json
+transfer_output_files = sample_$(LINE).tar
+transfer_output_remaps = "sample_$(LINE).tar = $(RUN_DIR)/samples/sample_$(LINE).tar"
+
+log    = $(RUN_DIR)/logs/sample_$(LINE).log
+output = $(RUN_DIR)/logs/sample_$(LINE).out
+error  = $(RUN_DIR)/logs/sample_$(LINE).err
+
+request_cpus   = 1
+# Memory grows only after a memory hold (code 34, counted as JobOutOfResources) and disk
+# only after a disk hold (code 21, StartdHeldJob); periodic_release then retries with the
+# larger request, up to three starts. Do not tie both to NumJobStarts: a memory hold
+# then doubles the disk request too, and a 35 GB line ends up asking for 232 GB of
+# scratch that no machine has.
+request_memory = $(MEMORY_MB) * (1 + ifThenElse(NumHoldsByReason.JobOutOfResources =?= UNDEFINED, 0, NumHoldsByReason.JobOutOfResources))
+periodic_release = (HoldReasonCode == 34 || HoldReasonCode == 21) && (NumJobStarts < 3)
+request_disk   = $(DISK_MB) * 1024 * (1 + ifThenElse(NumHoldsByReason.StartdHeldJob =?= UNDEFINED, 0, NumHoldsByReason.StartdHeldJob))
+
+# Downloads come from Google Cloud Storage; stay in the CHTC pool (no OSPool flocking).
+requirements   = (HasCHTCStaging == true)
+max_retries = 2
+
+queue

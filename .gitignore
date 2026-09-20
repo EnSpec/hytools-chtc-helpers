@@ -1,0 +1,11 @@
+# machine-specific and secret
+config/local_paths.py
+config/credentials.py
+
+# generated
+chtc/bundle/
+chtc/runs/
+scratch/
+__pycache__/
+*.pyc
+.venv/

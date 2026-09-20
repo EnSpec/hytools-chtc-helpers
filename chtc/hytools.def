@@ -1,0 +1,38 @@
+Bootstrap: docker
+From: python:3.11
+
+# Apptainer image for every job on CHTC. Build once in an interactive build job (see
+# docs/getting_started.md), move the .sif to /staging, and point CHTC_CONTAINER in
+# config/local_paths.py at it. Rebuild when the HyTools commit or a dependency
+# changes; put the new image under a new file name so the osdf cache does not serve
+# the old one.
+#
+# No apt-get and no git: the CHTC build sandbox has no writable /tmp for apt, so HyTools
+# is installed from GitHub's zip archive of the pinned commit, and setuptools_scm is told
+# the version because a zip carries no git metadata.
+
+%post
+    set -e
+    export TMPDIR=/root/tmp
+    mkdir -p "$TMPDIR"
+    pip install --no-cache-dir --upgrade pip
+    # Pinned HyTools commit. Bump it to pick up upstream fixes, then rebuild under a
+    # new image name.
+    export SETUPTOOLS_SCM_PRETEND_VERSION=1.6.1
+    pip install --no-cache-dir \
+        "https://github.com/EnSpec/hytools/archive/4bf44f798b4fd9365860e72cdde6a240999ff2cf.zip" \
+        "rasterio>=1.4" "requests>=2.32" "h5py>=3.10" "numpy>=2.0"
+    python -c "import hytools, rasterio, h5py, numpy, requests; print('hytools ok')"
+    rm -rf "$TMPDIR"
+
+%environment
+    export LC_ALL=C.UTF-8
+    export OMP_NUM_THREADS=1
+    export OPENBLAS_NUM_THREADS=1
+    export MKL_NUM_THREADS=1
+
+%runscript
+    exec python "$@"
+
+%labels
+    Project hytools-chtc-helpers

@@ -1,0 +1,19 @@
+[project]
+name = "hytools-chtc-helpers"
+version = "0.1.0"
+description = "Run HyTools topo/BRDF correction and PLSR trait maps over NEON AOP flightlines on UW-Madison CHTC"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
+dependencies = [
+    "h5py>=3.10",
+    "numpy>=1.26",
+    "rasterio>=1.3",
+    "requests>=2.31",
+    "scipy>=1.11",
+]
+
+[tool.uv]
+# HyTools itself is not on PyPI; the container installs it from GitHub (chtc/hytools.def).
+# For local runs: uv pip install "hytools @ git+https://github.com/EnSpec/hytools@<commit>"

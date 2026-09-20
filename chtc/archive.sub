@@ -1,0 +1,32 @@
+# Archive: one job per flight, after the BRDF fit. Ships the flight's stage A samples and
+# the topo/BRDF coefficients to the lab server through Pelican (CHTC_CORRECTION_DEST in
+# config/paths.py), so a later stage C rerun needs no resampling and a BRDF refit needs
+# no re-download. post_archive.sh then deletes the samples from the access point.
+
+container_image = $(CONTAINER)
+
+executable = $(CHTC_DIR)/run_archive.sh
+arguments  = $(FLIGHT)
+
+transfer_input_files = $(RUN_DIR)/coeffs_$(FLIGHT).tar, $(SAMPLE_TARS)
+transfer_output_files = samples_$(FLIGHT).tar, coeffs_$(FLIGHT).tar
+transfer_output_remaps = "samples_$(FLIGHT).tar = $(CORRECTION_DEST)/$(FLIGHT)/samples_$(FLIGHT).tar; coeffs_$(FLIGHT).tar = $(CORRECTION_DEST)/$(FLIGHT)/coeffs_$(FLIGHT).tar"
+
+log    = $(RUN_DIR)/logs/archive.log
+output = $(RUN_DIR)/logs/archive.out
+error  = $(RUN_DIR)/logs/archive.err
+
+request_cpus   = 1
+# Memory grows only after a memory hold (code 34, counted as JobOutOfResources) and disk
+# only after a disk hold (code 21, StartdHeldJob); periodic_release then retries with the
+# larger request, up to three starts. Do not tie both to NumJobStarts: a memory hold
+# then doubles the disk request too, and a 35 GB line ends up asking for 232 GB of
+# scratch that no machine has.
+request_memory = 1GB
+request_disk   = $(DISK_MB) * 1024 * (1 + ifThenElse(NumHoldsByReason.StartdHeldJob =?= UNDEFINED, 0, NumHoldsByReason.StartdHeldJob))
+periodic_release = (HoldReasonCode == 34 || HoldReasonCode == 21) && (NumJobStarts < 3)
+
+requirements   = (HasCHTCStaging == true)
+max_retries = 1
+
+queue
